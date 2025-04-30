@@ -1,7 +1,8 @@
-use crate::{header::ExternalHeader, traits::tl_object::TLObject};
 use std::cmp::Ordering;
 
 use tokio::{io::{AsyncReadExt, AsyncWriteExt, Interest}, net};
+
+use crate::{header::ExternalHeader, traits::tl_object::TLObject};
 
 #[derive(Debug)]
 pub struct TcpAbridged {
@@ -19,7 +20,7 @@ impl TcpAbridged {
         return Ok(Self { stream: stream, header: header});
     }
     
-    fn _prepare_abridged_payload(&self, payload: &Vec<u8>) -> Vec<u8> {
+    fn prepare_abridged_payload(&self, payload: &Vec<u8>) -> Vec<u8> {
         let size = payload.len() / 4;
         return match size.cmp(&127) {
             Ordering::Less => [&[size as u8], payload.as_slice()].concat(),
@@ -33,7 +34,7 @@ impl TcpAbridged {
     
     pub async fn send_packet<T : TLObject>(&mut self, mut packet: T) -> std::io::Result<usize> {
         let payload = self.header.wrap_packet(&mut packet)?;
-        let abridged_payload = self._prepare_abridged_payload(&payload);
+        let abridged_payload = self.prepare_abridged_payload(&payload);
         self.stream.write_all(&abridged_payload).await.unwrap();
         return Ok(abridged_payload.len());
     }

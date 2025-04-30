@@ -1,7 +1,9 @@
-use std::{any::type_name, io::{BufReader, Read}};
+use std::io::{BufReader, Read};
 
 use byteorder::{LittleEndian, ReadBytesExt as _};
 use i256::I256;
+
+use crate::utils::calculate_padding_bytes;
 
 pub trait TLObject {
     fn read_from(buffer: &mut BufReader<&[u8]>) -> Self;
@@ -106,22 +108,19 @@ impl TLObject for Box<[u8]> {
             total.extend_from_slice(size.to_le_bytes().chunks(3).next().unwrap());
             total.extend_from_slice(&self[..]);
         }
-        let mut to_extend = 4 - (total.len() % 4);
-        if to_extend == 4 {
-            to_extend = 0;
-        }
+        let to_extend = calculate_padding_bytes(
+            total.len(),
+            4
+        );
         total.extend_from_slice(&vec![0u8; to_extend]);
         return total;
     }
     fn read_from(buffer: &mut BufReader<&[u8]>) -> Self {
         let size: usize = buffer.read_u8().unwrap() as usize;
         let mut total: Vec<u8>;
-        let big: bool;
         if size <= 253 {
             total = vec![0u8; size];
-            big = false;
         } else {
-            big = true;
             let mut additional_size = [0u8; 3];
             buffer.read(&mut additional_size).unwrap();
             let size_bytes: [u8; 4] = [
@@ -131,11 +130,11 @@ impl TLObject for Box<[u8]> {
             total = vec![0u8; i32::from_le_bytes(size_bytes) as usize];
         }
         buffer.read(&mut total).unwrap();
-        let space = if big {4} else {1};
-        let mut left = 4 - ((total.len() + space) % 4);
-        if left == 4 {
-            left = 0;
-        }
+        let additional = if size == 254 {4} else {1};
+        let left = calculate_padding_bytes(
+            total.len() + additional,
+            4
+        );
         buffer.read(&mut vec![0u8; left]).unwrap();
         return total.into_boxed_slice();
     }

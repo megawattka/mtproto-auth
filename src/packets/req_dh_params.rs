@@ -16,7 +16,22 @@ impl TLObject for ReqDHParams {
     fn read_from(buffer: &mut BufReader<&[u8]>) -> Self {
         let packet_id = u32::read_from(buffer);
         assert!(packet_id == 0xd712e4be);
-        todo!();
+        
+        let nonce = i128::read_from(buffer);
+        let server_nonce = i128::read_from(buffer);
+        let p = Box::<[u8; 4]>::read_from(buffer);
+        let q = Box::<[u8; 4]>::read_from(buffer);
+        let public_key_fingerprint = i64::read_from(buffer);
+        let encrypted_data = Box::<[u8; 256]>::read_from(buffer);
+
+        return ReqDHParams {
+            nonce,
+            server_nonce,
+            p,
+            q,
+            public_key_fingerprint,
+            encrypted_data
+        }
     }
 
     fn to_bytes(&self) -> Vec<u8> {
