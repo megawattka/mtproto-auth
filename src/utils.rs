@@ -1,10 +1,13 @@
 use std::{env, io::{Error, ErrorKind}, fs};
 
-use aes::cipher::{
-    block_padding::NoPadding,
-    BlockDecryptMut as _,
-    BlockEncryptMut,
-    KeyIvInit
+use aes::{
+    cipher::{
+        block_padding::NoPadding,
+        BlockDecryptMut as _,
+        BlockEncryptMut,
+        KeyIvInit
+    },
+    Aes256
 };
 use num::{
     bigint::Sign,
@@ -12,7 +15,7 @@ use num::{
     BigInt
 };
 use prime_factorization::Factorization;
-use rand::RngCore;
+use rand::{rngs::StdRng, RngCore};
 use rsa::pkcs8::DecodePublicKey;
 use sha1::{
     Digest,
@@ -31,10 +34,10 @@ pub fn calculate_padding_bytes(data_len: usize, block_size: usize) -> usize {
     return if amount == block_size {0} else {amount}
 }
 
-pub fn sha1_digest(payload: &[u8]) -> Box<[u8; 20]> {
+pub fn sha1_digest(payload: &[u8]) -> [u8; 20] {
     let mut object = Sha1::new();
     object.update(payload);
-    return Box::<[u8; 20]>::new(object.finalize().try_into().unwrap());
+    return object.finalize().try_into().unwrap();
 }
 
 pub fn find_cert(values: Vec<i64>) -> std::io::Result<(i64, rsa::RsaPublicKey)> {
@@ -65,7 +68,7 @@ pub fn aes256_ige_decrypt(
     key: &[u8; 32],
     iv: &[u8; 32]
 ) -> Box<[u8]> {  
-    let cipher = ige::Decryptor::<aes::Aes256>::new(key.into(), iv.into());
+    let cipher = ige::Decryptor::<Aes256>::new(key.into(), iv.into());
     let mut buffer = Vec::from(ciphertext);
     cipher
         .decrypt_padded_mut::<NoPadding>(&mut buffer)
@@ -78,7 +81,7 @@ pub fn aes256_ige_encrypt(
     key: &[u8; 32],
     iv: &[u8; 32]
 ) -> Box<[u8]> {  
-    let cipher = ige::Encryptor::<aes::Aes256>::new(key.into(), iv.into());
+    let cipher = ige::Encryptor::<Aes256>::new(key.into(), iv.into());
     let pt_len = plaintext.len();
     let mut buf = vec![0u8; pt_len];
     buf.copy_from_slice(&plaintext[..]);
@@ -88,7 +91,7 @@ pub fn aes256_ige_encrypt(
     return Box::from(decrypted);
 }
 
-pub fn const_urandom<const N: usize>(rng: &mut rand::rngs::StdRng) -> [u8; N] {
+pub fn const_urandom<const N: usize>(rng: &mut StdRng) -> [u8; N] {
     let mut buffer = vec![0u8; N];
     rng.fill_bytes(&mut buffer);
     return buffer.try_into().unwrap();

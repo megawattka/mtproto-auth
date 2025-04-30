@@ -49,7 +49,7 @@ async fn main() -> std::io::Result<()> {
 
     let req_pq_multi = ReqPQMulti { nonce };
 
-    let _ = transport.send_packet(req_pq_multi).await?;
+    transport.send_packet(req_pq_multi).await?;
     let res_pq_response= transport.read_packet_payload().await?;
 
     let mut res_pq_reader = BufReader::new(&res_pq_response[20..]);
@@ -111,13 +111,13 @@ async fn main() -> std::io::Result<()> {
     let server_nonce_le = &server_nonce.to_le_bytes()[..];
 
     let tmp_aes_key: &[u8; 32] = &[
-        &*sha1_digest(&[new_nonce_le, server_nonce_le].concat()),
+        &sha1_digest(&[new_nonce_le, server_nonce_le].concat()),
         &sha1_digest(&[server_nonce_le, new_nonce_le].concat())[..12]
     ].concat().try_into().unwrap();
 
     let tmp_aes_iv: &[u8; 32] = &[
         &sha1_digest(&[server_nonce_le, new_nonce_le].concat())[12..],
-        &*sha1_digest(&[new_nonce_le, new_nonce_le].concat()),
+        &sha1_digest(&[new_nonce_le, new_nonce_le].concat()),
         &new_nonce_le[..4]
     ].concat().try_into().unwrap();
 
@@ -147,7 +147,7 @@ async fn main() -> std::io::Result<()> {
         g_b: Box::new(g_b)
     };
     let dh_inner_bytes = client_dh_inner.to_bytes();
-    let dh_inner_digest = *sha1_digest(&dh_inner_bytes);
+    let dh_inner_digest = sha1_digest(&dh_inner_bytes);
     let dh_inner_padding_len = calculate_padding_bytes(
         dh_inner_bytes.len() + dh_inner_digest.len(),
         16
@@ -193,7 +193,7 @@ async fn main() -> std::io::Result<()> {
     assert!(two_power_of_2k < g_b_num  && g_b_num < dh_prime - two_power_of_2k);
 
     let dh_inner_serialized = server_dh_inner.to_bytes();
-    assert_eq!(server_dh_inner_decrypted[..20], *sha1_digest(&dh_inner_serialized));
+    assert_eq!(server_dh_inner_decrypted[..20], sha1_digest(&dh_inner_serialized));
 
     assert_eq!(nonce, res_pq.nonce);
     assert_eq!(nonce, server_dh_params_ok.nonce);

@@ -1,6 +1,6 @@
 /target
-111.py
+test.py
 get_objects.py
 objects.json
 session.json
-.vscode
+/.vscode
