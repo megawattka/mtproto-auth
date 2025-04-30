@@ -1,14 +1,19 @@
-use std::{array::from_fn, io::{BufReader, Read}};
+use std::io::BufReader;
 
 use i256::i256;
-use ::i256::{u256, I256};
-use num::{traits::FromBytes, BigInt, BigUint};
+use num::{traits::FromBytes, BigUint};
 use rsa::traits::PublicKeyParts;
 use chrono::Local;
 use traits::tl_object::TLObject;
 use rand::{self, Rng, RngCore, SeedableRng};
 use packets::{
-    client_dh_inner_data::{self, ClientDHInnerData}, p_q_inner_data::PQInnerData, req_dh_params::ReqDHParams, req_pq_multi::ReqPQMulti, res_pq::ResPQ, server_dh_inner_data::ServerDHInnerData, server_dh_params_ok::ServerDHParamsOK
+    client_dh_inner_data::ClientDHInnerData,
+    p_q_inner_data::PQInnerData,
+    req_dh_params::ReqDHParams,
+    req_pq_multi::ReqPQMulti,
+    res_pq::ResPQ,
+    server_dh_inner_data::ServerDHInnerData,
+    server_dh_params_ok::ServerDHParamsOK
 };
 use utils::{aes256_ige_decrypt, find_cert, prime_decompose, rsa_encrypt, sha1_digest, urandom};
 
