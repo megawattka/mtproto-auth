@@ -2,7 +2,7 @@ use std::io::BufReader;
 
 use base64::{prelude::BASE64_STANDARD, Engine};
 use i256::i256;
-use num::{traits::FromBytes, BigUint, FromPrimitive};
+use num::{traits::FromBytes, BigUint, FromPrimitive, One};
 use rsa::traits::PublicKeyParts;
 use chrono::Local;
 use traits::tl_object::TLObject;
@@ -183,12 +183,12 @@ async fn main() -> std::io::Result<()> {
     assert_eq!(dh_prime, current_dh_prime);
 
     let g_b_num = BigUint::from_bytes_be(&g_b);
-    let substracted = &dh_prime - BigUint::from_i32(1).unwrap();
+    let substracted = &dh_prime - BigUint::one();
     assert!(1 < g && BigUint::from_i32(g).unwrap() < substracted);
     assert!(1 < g && g_a < substracted);
     assert!(1 < g && g_b_num < substracted);
 
-    let two_power_of_2k = BigUint::from_i32(2_i32.pow(2048 - 64)).unwrap();
+    let two_power_of_2k = BigUint::one() << (2048 - 64);
     assert!(two_power_of_2k < g_a  && g_a < &dh_prime - &two_power_of_2k);
     assert!(two_power_of_2k < g_b_num  && g_b_num < dh_prime - two_power_of_2k);
 
