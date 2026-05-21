@@ -1,6 +1,3 @@
 /target
-test.py
-get_objects.py
-objects.json
-session.json
 /.vscode
+Cargo.lock

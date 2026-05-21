@@ -1,10 +1,10 @@
-use std::io::BufReader;
+use std::{io::BufReader, time::Instant};
 
 use base64::{prelude::BASE64_STANDARD, Engine};
+use bytes::Bytes;
 use i256::i256;
 use num::{traits::FromBytes, BigUint, FromPrimitive, One};
 use rsa::traits::PublicKeyParts;
-use chrono::Local;
 use traits::tl_object::TLObject;
 use rand::{self, Rng, RngCore, SeedableRng};
 
@@ -41,11 +41,11 @@ const CURRENT_DH_PRIME_BYTES: [u8; 256] = [199, 28, 174, 185, 198, 177, 201, 4, 
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    let started = chrono::Local::now().timestamp_millis();
+    let started = Instant::now();
     let mut transport = network::TcpAbridged::new("149.154.167.51:443", &[0; 8]).await?;
     let mut rng = rand::rngs::StdRng::from_os_rng();
     let nonce: i128 = rng.random();
-    println!("nonce={}", nonce);
+    dbg!(nonce);
 
     let req_pq_multi = ReqPQMulti { nonce };
 
@@ -56,20 +56,20 @@ async fn main() -> std::io::Result<()> {
     let res_pq = ResPQ::read_from(&mut res_pq_reader);
 
     let server_nonce = res_pq.server_nonce;
-    println!("server_nonce: {}", server_nonce);
+    dbg!(server_nonce);
 
     let pq = res_pq.pq;
     let pq_num: u64 = u64::from_be_bytes(*pq);
     println!("Starting prime decomposition for {}", pq_num);
-    let ts = Local::now().timestamp_millis();
+    let ts = Instant::now();
     let (p, q) = prime_decompose(pq_num);
-    println!("Done prime decomposition in {}ms p={p} q={q}", Local::now().timestamp_millis() - ts);
+    println!("Done prime decomposition in {:.2?}ms p={p} q={q}", ts.elapsed());
     let (fp, pkey) = find_cert(res_pq.server_public_key_fingerprints).unwrap();
     println!("using RSA key: {}.pem", fp);
 
     let nonce_bytes: [u8; 32] = const_urandom(&mut rng);
     let new_nonce = i256::from_be_bytes(nonce_bytes);
-    println!("generated new_nonce: {}", new_nonce);
+    dbg!(new_nonce);
 
     let pq_inner_data_obj = PQInnerData {
         pq,
@@ -127,7 +127,7 @@ async fn main() -> std::io::Result<()> {
     let server_dh_inner = ServerDHInnerData::read_from(&mut server_dh_inner_reader);
     let dh_prime = BigUint::from_be_bytes(&*server_dh_inner.dh_prime);
     let timedelta = server_dh_inner.server_time as i64 - chrono::Local::now().timestamp();
-    println!("delta_time={}", timedelta);
+    dbg!(timedelta);
 
     let g = server_dh_inner.g;
     let b_bytes: [u8; 256] = const_urandom(&mut rng);
@@ -200,12 +200,13 @@ async fn main() -> std::io::Result<()> {
     assert_eq!(nonce, dh_gen_ok_obj.nonce);
     assert_eq!(server_nonce, server_dh_params_ok.server_nonce);
 
-    let server_salt = xor(&new_nonce_le[..8], &server_nonce_le[..8]);
-    println!("Got server salt: {:?}", server_salt);
-    println!("Done in {}ms", chrono::Local::now().timestamp_millis() - started);
+    let raw_server_salt = xor(&new_nonce_le[..8], &server_nonce_le[..8]);
+    let server_salt = Bytes::from(raw_server_salt);
+    dbg!(server_salt);
+    println!("Done in {:.2?}ms", started.elapsed());
 
     let auth_key_base64 = BASE64_STANDARD.encode(auth_key);
-    println!("auth_key={}", auth_key_base64);
+    dbg!(auth_key_base64);
 
     return Ok(());
 
